@@ -3817,6 +3817,9 @@ void RedrawMapperEventButtons() {
 
 void MAPPER_TriggerEventByName(const std::string& name) {
     CEvent *event = get_mapper_event_by_name(name);
+    /* jsdos savestate debug: make event resolution visible on the console */
+    fprintf(stderr, "[mapper] TriggerEventByName('%s') -> %s\n", name.c_str(),
+            event == NULL ? "NOT FOUND" : (event->type == CEvent::handler_event_t ? "handler" : "non-handler"));
     if (event != NULL) {
         if (event->type == CEvent::handler_event_t) {
             CHandlerEvent *he = reinterpret_cast<CHandlerEvent*>(event);

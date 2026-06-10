@@ -144,6 +144,8 @@ namespace
 
 	void notifyError(const std::string& message, bool log=true)
 	{
+		/* jsdos savestate debug: stderr reaches the browser console */
+		fprintf(stderr, "[savestate] ERROR: %s\n", message.c_str());
 		if (log) LOG_MSG("%s",message.c_str());
 		systemmessagebox("Error",message.c_str(),"ok","error", 1);
 	}
@@ -414,6 +416,7 @@ int zipOutOpenFile(zipFile zf,const char *zfname,zip_fileinfo &zi,const bool com
 }
 
 void SaveState::save(size_t slot) { //throw (Error)
+	fprintf(stderr, "[savestate] save() entered, slot=%d\n", (int)slot);
 	if (slot >= SLOT_COUNT*MAX_PAGE)  return;
 #if defined(C_SDL2) && !defined(JSDOS)
         SDL_PauseAudioDevice(SDL2_AudioDevice, 0);
@@ -574,8 +577,10 @@ done:
 
 	if (save_err)
 		notifyError(MSG_Get("SAVE_FAILED"));
-	else
+	else {
+		fprintf(stderr, "[savestate] save() OK, slot=%d path=%s\n", (int)slot, save.c_str());
 		LOG_MSG("[%s]: Saved. (Slot %d)", getTime().c_str(), (int)slot+1);
+	}
 }
 
 void savestatecorrupt(const char* part) {
@@ -594,6 +599,7 @@ bool loadstateconfirm(int ind) {
 }
 
 void SaveState::load(size_t slot) const { //throw (Error)
+	fprintf(stderr, "[savestate] load() entered, slot=%d\n", (int)slot);
 	//	if (isEmpty(slot)) return;
 	bool load_err=false;
 	if((MEM_TotalPages()*4096/1024/1024)>1024) {
@@ -777,6 +783,7 @@ done:
 	}
 
 	if (!dos_kernel_disabled) flagged_restore((char *)save.c_str());
+	fprintf(stderr, "[savestate] load() %s, slot=%d path=%s\n", load_err ? "FAILED" : "OK", (int)slot, save.c_str());
 	if (!load_err) LOG_MSG("[%s]: Loaded. (Slot %d)", getTime().c_str(), (int)slot+1);
 }
 
