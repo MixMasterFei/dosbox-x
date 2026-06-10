@@ -15,6 +15,7 @@
 #include "control.h"
 #include "logging.h"
 #include "mixer.h"
+#include "pic.h"
 #include "build_timestamp.h"
 #ifdef WIN32
 #include "direct.h"
@@ -188,14 +189,7 @@ namespace
 	}
 
 
-	void LoadGameState(bool pressed) {
-		if (!pressed) return;
-
-		//    if (SaveState::instance().isEmpty(currentSlot))
-		//    {
-		//        LOG_MSG("[%s]: State %d is empty!", getTime().c_str(), currentSlot + 1);
-		//        return;
-		//    }
+	void LoadGameStateNow() {
 		if (!GFX_IsFullscreen()&&render.aspect) GFX_LosingFocus();
 		try
 		{
@@ -209,6 +203,33 @@ namespace
 		{
 			notifyError(err);
 		}
+	}
+
+#if defined(JSDOS)
+	void LoadGameStateEvent(Bitu /*val*/) {
+		fprintf(stderr, "[savestate] deferred load firing inside the emulation loop\n");
+		LoadGameStateNow();
+	}
+#endif
+
+	void LoadGameState(bool pressed) {
+		if (!pressed) return;
+
+		//    if (SaveState::instance().isEmpty(currentSlot))
+		//    {
+		//        LOG_MSG("[%s]: State %d is empty!", getTime().c_str(), currentSlot + 1);
+		//        return;
+		//    }
+#if defined(JSDOS)
+		/* jsdos: backend events arrive from JS while the asyncified emulation
+		 * loop is suspended — restoring CPU/PIC state from that context gets
+		 * clobbered when the suspended continuation resumes. Defer the restore
+		 * into emulated time so it runs at a safe point inside the loop. */
+		fprintf(stderr, "[savestate] load requested — deferring via PIC_AddEvent\n");
+		PIC_AddEvent(&LoadGameStateEvent, 0.0f);
+#else
+		LoadGameStateNow();
+#endif
 	}
 
 	void NextSaveSlot(bool pressed) {
